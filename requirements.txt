@@ -3,3 +3,5 @@ langchain-community
 langchain-core
 langchain-google-genai
 python-dotenv
+langgraph==0.3.21
+euriai
