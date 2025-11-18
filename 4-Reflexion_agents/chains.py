@@ -1,8 +1,9 @@
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 import datetime 
 from euriai.langchain import EuriaiChatModel
-from schema import AnswerQuestion
+from schema import AnswerQuestion,ReviseAnswer
 from langchain_core.messages import HumanMessage
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 
 import os 
 from dotenv import load_dotenv
@@ -31,14 +32,29 @@ actor_prompt_template=ChatPromptTemplate.from_messages(
     ]
 ).partial(time=lambda: datetime.datetime.now().isoformat())
 
+revise_instructions = """Revise your previous answer using the new information.
+    - You should use the previous critique to add important information to your answer.
+        - You MUST include numerical citations in your revised answer to ensure it can be verified.
+        - Add a "References" section to the bottom of your answer (which does not count towards the word limit). In form of:
+            - [1] https://example.com
+            - [2] https://example.com
+    - You should use the previous critique to remove superfluous information from your answer and make SURE it is not more than 250 words.
+"""
+
 first_responder_prompt_template=actor_prompt_template.partial(
     first_instruction="Provide a detailed ~250 word answer"
 )
 
+revisor_prompt_template=actor_prompt_template.partial(
+    first_instruction=revise_instructions
+)
+
 first_responder_chain = first_responder_prompt_template | llm.bind_tools(tools=[AnswerQuestion]) 
 
-response= first_responder_chain.invoke({
-    "messages":[HumanMessage(content="AI agents taking over the content creation")]
-})
+revisor_chain=revisor_prompt_template | llm.bind_tools(tools=[ReviseAnswer])
 
-print(response)
+# response= revisor_chain.invoke({
+#     "messages":[HumanMessage(content="AI agents taking over the content creation")]
+# })
+
+# print(response)
